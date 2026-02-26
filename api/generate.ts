@@ -20,7 +20,7 @@ interface FalResultResponse {
 
 const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
 const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-lora';
-const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux';
+const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-lora';
 const MAX_POLL_ATTEMPTS = 60;
 const POLL_INTERVAL = 5000;
 
@@ -145,9 +145,9 @@ export default async function handler(
     console.log(`Prompt: ${prompt.substring(0, 100)}...`);
 
     const requestId = await submitToFal(prompt, loraUrl, apiKey, image_size);
-    console.log(`Submitted! Request ID: ${requestId}`);
+    console.log(`Submitted to flux-lora! Request ID: ${requestId}`);
 
-    // If async mode, return immediately with request_id
+    // If async mode, return immediately
     if (asyncMode) {
       return res.status(202).json({
         success: true,
@@ -158,7 +158,7 @@ export default async function handler(
       });
     }
 
-    // Otherwise wait for completion (may timeout on Hobby plan)
+    // Otherwise wait for completion
     const result = await pollForCompletion(requestId, apiKey);
 
     if (!result.images || result.images.length === 0) {
