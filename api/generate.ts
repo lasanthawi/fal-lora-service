@@ -71,10 +71,12 @@ async function pollForCompletion(
     await sleep(POLL_INTERVAL);
 
     const response = await fetch(statusUrl, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         'Authorization': `Key ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({}),
     });
 
     if (!response.ok) {
@@ -86,10 +88,12 @@ async function pollForCompletion(
     if (status.status === 'COMPLETED') {
       const resultUrl = `${FAL_API_BASE}/requests/${requestId}`;
       const resultResponse = await fetch(resultUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Authorization': `Key ${apiKey}`,
+          'Content-Type': 'application/json',
         },
+        body: JSON.stringify({}),
       });
 
       if (!resultResponse.ok) {
