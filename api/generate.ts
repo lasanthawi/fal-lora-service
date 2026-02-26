@@ -71,6 +71,7 @@ async function pollForCompletion(
     await sleep(POLL_INTERVAL);
 
     const response = await fetch(statusUrl, {
+      method: 'GET',
       headers: {
         'Authorization': `Key ${apiKey}`,
       },
@@ -85,6 +86,7 @@ async function pollForCompletion(
     if (status.status === 'COMPLETED') {
       const resultUrl = `${FAL_API_BASE}/requests/${requestId}`;
       const resultResponse = await fetch(resultUrl, {
+        method: 'GET',
         headers: {
           'Authorization': `Key ${apiKey}`,
         },
