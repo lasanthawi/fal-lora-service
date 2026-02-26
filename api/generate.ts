@@ -18,7 +18,8 @@ interface FalResultResponse {
 }
 
 const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
-const FAL_API_BASE = 'https://queue.fal.run/fal-ai/flux-2/lora';
+const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-2/lora';
+const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-2';
 const MAX_POLL_ATTEMPTS = 60;
 const POLL_INTERVAL = 5000;
 
@@ -32,7 +33,7 @@ async function submitToFal(
   apiKey: string,
   imageSize: string
 ): Promise<string> {
-  const response = await fetch(FAL_API_BASE, {
+  const response = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
     headers: {
       'Authorization': `Key ${apiKey}`,
@@ -65,7 +66,7 @@ async function pollForCompletion(
   requestId: string,
   apiKey: string
 ): Promise<FalResultResponse> {
-  const statusUrl = `${FAL_API_BASE}/requests/${requestId}/status`;
+  const statusUrl = `${FAL_STATUS_BASE}/requests/${requestId}/status`;
 
   for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
     await sleep(POLL_INTERVAL);
@@ -80,13 +81,13 @@ async function pollForCompletion(
     });
 
     if (!response.ok) {
-      throw new Error(`Status check failed: ${response.status}`);
+      throw new Error(`Status check failed: ${response.status} at ${statusUrl}`);
     }
 
     const status: FalQueueResponse = await response.json();
 
     if (status.status === 'COMPLETED') {
-      const resultUrl = `${FAL_API_BASE}/requests/${requestId}`;
+      const resultUrl = `${FAL_STATUS_BASE}/requests/${requestId}`;
       const resultResponse = await fetch(resultUrl, {
         method: 'POST',
         headers: {
@@ -139,7 +140,8 @@ export default async function handler(
 
     const loraUrl = lora_url || DEFAULT_LORA_URL;
 
-    console.log(`Starting image generation: ${prompt.substring(0, 100)}...`);
+    console.log(`Starting image generation with LoRA: ${loraUrl.substring(0, 60)}...`);
+    console.log(`Prompt: ${prompt.substring(0, 100)}...`);
 
     const requestId = await submitToFal(prompt, loraUrl, apiKey, image_size);
     console.log(`Submitted! Request ID: ${requestId}`);
@@ -158,6 +160,7 @@ export default async function handler(
       image_url: imageUrl,
       request_id: requestId,
       seed: result.seed,
+      lora_used: loraUrl,
     });
 
   } catch (error: any) {
