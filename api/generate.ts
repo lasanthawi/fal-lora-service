@@ -54,7 +54,7 @@ async function submitToFal(
     throw new Error(`Fal AI submission failed: ${response.status} - ${errorText}`);
   }
 
-  const data: FalQueueResponse = await response.json();
+  const data = (await response.json()) as FalQueueResponse;
 
   if (!data.request_id) {
     throw new Error('No request_id returned from Fal AI');
@@ -73,36 +73,33 @@ async function pollForCompletion(
     await sleep(POLL_INTERVAL);
 
     const response = await fetch(statusUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Key ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({}),
+      method: 'GET',
+      headers: { 'Authorization': `Key ${apiKey}` },
     });
 
     if (!response.ok) {
       throw new Error(`Status check failed: ${response.status} at ${statusUrl}`);
     }
 
-    const status: FalQueueResponse = await response.json();
+    const status = (await response.json()) as FalQueueResponse;
 
     if (status.status === 'COMPLETED') {
       const resultUrl = `${FAL_STATUS_BASE}/requests/${requestId}`;
       const resultResponse = await fetch(resultUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Key ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({}),
+        method: 'GET',
+        headers: { 'Authorization': `Key ${apiKey}` },
       });
 
       if (!resultResponse.ok) {
         throw new Error(`Result fetch failed: ${resultResponse.status}`);
       }
 
-      return await resultResponse.json();
+      const raw = (await resultResponse.json()) as { response?: FalResultResponse } & FalResultResponse;
+      const result = raw.response ?? raw;
+      if (!result.images?.length) {
+        throw new Error('No images in result');
+      }
+      return result as FalResultResponse;
     } else if (status.status === 'FAILED' || status.status === 'CANCELLED') {
       throw new Error(`Image generation ${status.status.toLowerCase()}`);
     }

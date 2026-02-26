@@ -5,13 +5,17 @@
   "main": "api/generate.ts",
   "scripts": {
     "dev": "vercel dev",
-    "build": "tsc"
+    "build": "tsc",
+    "test:generate": "tsx scripts/test-generate.ts",
+    "test:instagram": "tsx scripts/test-instagram-post.ts",
+    "test:instagram:full": "tsx scripts/test-instagram-post.ts --full"
   },
   "dependencies": {
     "@vercel/node": "^3.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
     "typescript": "^5.0.0",
     "vercel": "^33.0.0"
   }

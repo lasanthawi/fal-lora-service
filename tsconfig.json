@@ -12,10 +12,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "types": ["node"]
   },
   "include": [
-    "api/**/*"
+    "api/**/*",
+    "lib/**/*"
   ],
   "exclude": [
     "node_modules"
