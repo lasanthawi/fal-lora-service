@@ -5,6 +5,7 @@ interface LoRARequest {
   lora_url?: string;
   fal_api_key?: string;
   image_size?: 'square' | 'landscape' | 'portrait';
+  async?: boolean;
 }
 
 interface FalQueueResponse {
@@ -127,7 +128,7 @@ export default async function handler(
   }
 
   try {
-    const { prompt, lora_url, fal_api_key, image_size = 'square' }: LoRARequest = req.body;
+    const { prompt, lora_url, fal_api_key, image_size = 'square', async: asyncMode }: LoRARequest = req.body;
 
     if (!prompt) {
       return res.status(400).json({ error: 'prompt is required' });
@@ -140,12 +141,24 @@ export default async function handler(
 
     const loraUrl = lora_url || DEFAULT_LORA_URL;
 
-    console.log(`Using Flux 1 LoRA model: ${loraUrl.substring(0, 80)}...`);
+    console.log(`Using Flux 1 LoRA: ${loraUrl.substring(0, 80)}...`);
     console.log(`Prompt: ${prompt.substring(0, 100)}...`);
 
     const requestId = await submitToFal(prompt, loraUrl, apiKey, image_size);
-    console.log(`Submitted to fal-ai/flux-lora! Request ID: ${requestId}`);
+    console.log(`Submitted! Request ID: ${requestId}`);
 
+    // If async mode, return immediately with request_id
+    if (asyncMode) {
+      return res.status(202).json({
+        success: true,
+        request_id: requestId,
+        status: 'IN_PROGRESS',
+        poll_url: `${FAL_STATUS_BASE}/requests/${requestId}/status`,
+        message: 'Image generation started. Poll the request_id for completion.',
+      });
+    }
+
+    // Otherwise wait for completion (may timeout on Hobby plan)
     const result = await pollForCompletion(requestId, apiKey);
 
     if (!result.images || result.images.length === 0) {
@@ -153,7 +166,7 @@ export default async function handler(
     }
 
     const imageUrl = result.images[0].url;
-    console.log(`Image generated successfully: ${imageUrl.substring(0, 60)}...`);
+    console.log(`Image generated: ${imageUrl.substring(0, 60)}...`);
 
     return res.status(200).json({
       success: true,
