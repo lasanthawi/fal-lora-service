@@ -18,8 +18,8 @@ interface FalResultResponse {
 }
 
 const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
-const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-2/lora';
-const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-2';
+const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-lora';
+const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux';
 const MAX_POLL_ATTEMPTS = 60;
 const POLL_INTERVAL = 5000;
 
@@ -140,11 +140,11 @@ export default async function handler(
 
     const loraUrl = lora_url || DEFAULT_LORA_URL;
 
-    console.log(`Starting image generation with LoRA: ${loraUrl.substring(0, 60)}...`);
+    console.log(`Using Flux 1 LoRA model: ${loraUrl.substring(0, 80)}...`);
     console.log(`Prompt: ${prompt.substring(0, 100)}...`);
 
     const requestId = await submitToFal(prompt, loraUrl, apiKey, image_size);
-    console.log(`Submitted! Request ID: ${requestId}`);
+    console.log(`Submitted to fal-ai/flux-lora! Request ID: ${requestId}`);
 
     const result = await pollForCompletion(requestId, apiKey);
 
@@ -153,7 +153,7 @@ export default async function handler(
     }
 
     const imageUrl = result.images[0].url;
-    console.log(`Image generated: ${imageUrl.substring(0, 60)}...`);
+    console.log(`Image generated successfully: ${imageUrl.substring(0, 60)}...`);
 
     return res.status(200).json({
       success: true,
@@ -161,6 +161,7 @@ export default async function handler(
       request_id: requestId,
       seed: result.seed,
       lora_used: loraUrl,
+      model: 'fal-ai/flux-lora',
     });
 
   } catch (error: any) {
