@@ -55,21 +55,43 @@ export default function PanelView() {
     if (p.surrounding != null) setSurrounding(p.surrounding);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const commitFocusedField = () => {
+    if (typeof document === 'undefined') return;
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+  };
+
+  const getTrimmedFormValue = (formData: FormData, key: string): string => {
+    const value = formData.get(key);
+    return typeof value === 'string' ? value.trim() : '';
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setLoading(true);
     setResult(null);
     try {
       const body: Record<string, string> = {};
-      if (preset) body.preset = preset;
-      if (postIdea) body.postIdea = postIdea;
-      if (occasion) body.occasion = occasion;
-      if (vibe) body.vibe = vibe;
-      if (mood) body.mood = mood;
-      if (clothing) body.clothing = clothing;
-      if (expression) body.expression = expression;
-      if (surrounding) body.surrounding = surrounding;
-      if (caption) body.caption = caption;
+      const presetValue = getTrimmedFormValue(formData, 'preset');
+      const postIdeaValue = getTrimmedFormValue(formData, 'postIdea');
+      const occasionValue = getTrimmedFormValue(formData, 'occasion');
+      const vibeValue = getTrimmedFormValue(formData, 'vibe');
+      const moodValue = getTrimmedFormValue(formData, 'mood');
+      const clothingValue = getTrimmedFormValue(formData, 'clothing');
+      const expressionValue = getTrimmedFormValue(formData, 'expression');
+      const surroundingValue = getTrimmedFormValue(formData, 'surrounding');
+      const captionValue = getTrimmedFormValue(formData, 'caption');
+
+      if (presetValue) body.preset = presetValue;
+      if (postIdeaValue) body.postIdea = postIdeaValue;
+      if (occasionValue) body.occasion = occasionValue;
+      if (vibeValue) body.vibe = vibeValue;
+      if (moodValue) body.mood = moodValue;
+      if (clothingValue) body.clothing = clothingValue;
+      if (expressionValue) body.expression = expressionValue;
+      if (surroundingValue) body.surrounding = surroundingValue;
+      if (captionValue) body.caption = captionValue;
 
       const res = await fetch('/api/publish', {
         method: 'POST',
@@ -120,6 +142,7 @@ export default function PanelView() {
         </div>
 
         <form id="panel-form" onSubmit={handleSubmit}>
+          <input type="hidden" name="preset" value={preset ?? ''} />
           <section className="card">
             <h3 className="card-title">Presets</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -141,6 +164,7 @@ export default function PanelView() {
             <label className="label" htmlFor="post-idea">Occasion, location, or topic</label>
             <textarea
               id="post-idea"
+              name="postIdea"
               className="textarea"
               value={postIdea}
               onChange={(e) => setPostIdea(e.target.value)}
@@ -152,7 +176,7 @@ export default function PanelView() {
           <section className="card">
             <h3 className="card-title">Scene{' & '}style</h3>
             <label className="label" htmlFor="occasion">Occasion</label>
-            <select id="occasion" className="select" value={occasion} onChange={(e) => setOccasion(e.target.value)} aria-label="Occasion">
+            <select id="occasion" name="occasion" className="select" value={occasion} onChange={(e) => setOccasion(e.target.value)} aria-label="Occasion">
               <option value="">Random</option>
               {OCCASIONS.map((o) => (
                 <option key={o} value={o}>{o}</option>
@@ -161,7 +185,7 @@ export default function PanelView() {
             <div className="form-grid-2">
               <div className="field">
                 <label className="label" htmlFor="vibe">Vibe</label>
-                <select id="vibe" className="select" value={vibe} onChange={(e) => setVibe(e.target.value)} aria-label="Vibe">
+                <select id="vibe" name="vibe" className="select" value={vibe} onChange={(e) => setVibe(e.target.value)} aria-label="Vibe">
                   <option value="">Any</option>
                   {VIBES.map((v) => (
                     <option key={v} value={v}>{v}</option>
@@ -170,7 +194,7 @@ export default function PanelView() {
               </div>
               <div className="field">
                 <label className="label" htmlFor="surrounding">Surrounding</label>
-                <select id="surrounding" className="select" value={surrounding} onChange={(e) => setSurrounding(e.target.value)} aria-label="Surrounding">
+                <select id="surrounding" name="surrounding" className="select" value={surrounding} onChange={(e) => setSurrounding(e.target.value)} aria-label="Surrounding">
                   <option value="">Any</option>
                   {SURROUNDINGS.map((s) => (
                     <option key={s} value={s}>{s}</option>
@@ -181,7 +205,7 @@ export default function PanelView() {
             <div className="form-grid-2">
               <div className="field">
                 <label className="label" htmlFor="mood">Mood</label>
-                <select id="mood" className="select" value={mood} onChange={(e) => setMood(e.target.value)} aria-label="Mood">
+                <select id="mood" name="mood" className="select" value={mood} onChange={(e) => setMood(e.target.value)} aria-label="Mood">
                   <option value="">Any</option>
                   {POSES_AND_MOODS.map((m) => (
                     <option key={m} value={m}>{m}</option>
@@ -190,7 +214,7 @@ export default function PanelView() {
               </div>
               <div className="field">
                 <label className="label" htmlFor="expression">Expression</label>
-                <select id="expression" className="select" value={expression} onChange={(e) => setExpression(e.target.value)} aria-label="Expression">
+                <select id="expression" name="expression" className="select" value={expression} onChange={(e) => setExpression(e.target.value)} aria-label="Expression">
                   <option value="">Any</option>
                   {POSES_AND_MOODS.map((expr) => (
                     <option key={expr} value={expr}>{expr}</option>
@@ -200,7 +224,7 @@ export default function PanelView() {
             </div>
             <div className="field-margin">
               <label className="label" htmlFor="clothing">Clothing</label>
-              <select id="clothing" className="select" value={clothing} onChange={(e) => setClothing(e.target.value)} aria-label="Clothing">
+              <select id="clothing" name="clothing" className="select" value={clothing} onChange={(e) => setClothing(e.target.value)} aria-label="Clothing">
                 <option value="">Random</option>
                 {(CLOTHING_OPTIONS as readonly string[]).map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -214,6 +238,7 @@ export default function PanelView() {
             <label className="label" htmlFor="caption">Custom caption</label>
             <textarea
               id="caption"
+              name="caption"
               className="textarea"
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
@@ -222,7 +247,7 @@ export default function PanelView() {
             />
           </section>
 
-          <button type="submit" disabled={loading} className="btn btn-primary btn-primary--inline">
+          <button type="submit" onPointerDown={commitFocusedField} disabled={loading} className="btn btn-primary btn-primary--inline">
             {loading ? 'Generating…' : 'Generate & publish'}
           </button>
         </form>
@@ -232,6 +257,7 @@ export default function PanelView() {
           <button
             type="submit"
             form="panel-form"
+            onPointerDown={commitFocusedField}
             disabled={loading}
             className="btn btn-primary app-bottom-bar__action"
             aria-label={loading ? 'Generating' : 'Generate and publish'}
