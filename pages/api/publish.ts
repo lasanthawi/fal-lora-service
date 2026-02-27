@@ -9,7 +9,7 @@ export const config = {
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const method = (req.method ?? '').toUpperCase();
-  if (method === 'OPTIONS') {
+  if (method === 'OPTIONS' ) {
     res.setHeader('Allow', 'OPTIONS, POST');
     return res.status(204).end();
   }
