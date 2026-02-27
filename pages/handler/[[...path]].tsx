@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { StackHandler } from '@stackframe/stack';
+import { StackHandler, SignIn, SignUp } from '@stackframe/stack';
 import { useRouter } from 'next/router';
 import { useMemo, useState, useEffect } from 'react';
 
@@ -76,19 +76,35 @@ export default function HandlerPage() {
           <h1>Welcome back</h1>
           <p>Sign in to continue to your dashboard</p>
         </div>
-        <Suspense
-          fallback={
-            <div className="loading-screen loading-screen--auth">
-              <span className="loading-dots">Loading</span>
-            </div>
-          }
-        >
-          <StackHandler
-            fullPage={true}
-            params={{ path }}
-            searchParams={searchParams}
-          />
-        </Suspense>
+        <div className="auth-card auth-card--handler">
+          <Suspense
+            fallback={
+              <div className="loading-screen loading-screen--auth">
+                <span className="loading-dots">Loading</span>
+              </div>
+            }
+          >
+            {path?.[0] === 'signin' ? (
+              <SignIn
+                fullPage={false}
+                automaticRedirect={true}
+                firstTab="password"
+              />
+            ) : path?.[0] === 'signup' ? (
+              <SignUp
+                fullPage={false}
+                automaticRedirect={true}
+                firstTab="password"
+              />
+            ) : (
+              <StackHandler
+                fullPage={false}
+                params={{ path }}
+                searchParams={searchParams}
+              />
+            )}
+          </Suspense>
+        </div>
       </div>
     </RedirectErrorBoundary>
   );

@@ -1,6 +1,6 @@
 import { useUser, UserButton } from '@stackframe/stack';
 import { useRouter } from 'next/router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   OCCASIONS,
   CLOTHING_OPTIONS,
@@ -22,6 +22,7 @@ type PublishResult = {
 export default function PanelView() {
   const user = useUser({ or: 'return-null' });
   const router = useRouter();
+  const hasSeenUser = useRef(false);
   const [postIdea, setPostIdea] = useState('');
   const [occasion, setOccasion] = useState('');
   const [vibe, setVibe] = useState('');
@@ -33,6 +34,8 @@ export default function PanelView() {
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PublishResult>(null);
+
+  if (user) hasSeenUser.current = true;
 
   useEffect(() => {
     if (user === undefined) return;
@@ -83,10 +86,19 @@ export default function PanelView() {
     }
   };
 
-  if (user === undefined || !user) {
+  // Only show loading on initial auth check. Once we've shown the form, don't flip back
+  // when useUser briefly returns undefined on re-renders (e.g. while typing), so input state isn't lost.
+  if (!hasSeenUser.current && user === undefined) {
     return (
       <div className="loading-screen">
         <span className="loading-dots">Loading</span>
+      </div>
+    );
+  }
+  if (!user) {
+    return (
+      <div className="loading-screen">
+        <span className="loading-dots">Redirecting</span>
       </div>
     );
   }
@@ -107,7 +119,7 @@ export default function PanelView() {
           <p>Set the scene and style. One click to generate an image and post to Instagram.</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
+        <form id="panel-form" onSubmit={handleSubmit}>
           <section className="card">
             <h3 className="card-title">Presets</h3>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -210,10 +222,23 @@ export default function PanelView() {
             />
           </section>
 
-          <button type="submit" disabled={loading} className="btn btn-primary">
+          <button type="submit" disabled={loading} className="btn btn-primary btn-primary--inline">
             {loading ? 'Generating…' : 'Generate & publish'}
           </button>
         </form>
+
+        {/* Mobile bottom toolbar: same primary action for thumb reach */}
+        <div className="app-bottom-bar">
+          <button
+            type="submit"
+            form="panel-form"
+            disabled={loading}
+            className="btn btn-primary app-bottom-bar__action"
+            aria-label={loading ? 'Generating' : 'Generate and publish'}
+          >
+            {loading ? 'Generating…' : 'Generate & publish'}
+          </button>
+        </div>
 
         {result && (
           <div className={`result-box ${result.success ? 'success' : 'error'}`}>

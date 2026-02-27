@@ -27,6 +27,17 @@
   box-sizing: border-box;
 }
 
+/* Touch-friendly: remove tap highlight, improve tap targets */
+@media (hover: none) and (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
 body {
   margin: 0;
   font-family: var(--font);
@@ -287,9 +298,10 @@ body {
 
 .auth-layout .auth-brand {
   text-align: center;
-  margin-bottom: 40px;
+  margin-bottom: 32px;
   position: relative;
   z-index: 1;
+  flex-shrink: 0;
 }
 
 .auth-layout .auth-brand .auth-product {
@@ -326,6 +338,196 @@ body {
   overflow: hidden;
   position: relative;
   z-index: 1;
+}
+
+.auth-card--handler {
+  max-width: 400px;
+  padding: 32px 36px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* Sign-in form: position and style all inputs, buttons, links inside auth layout */
+.auth-layout form {
+  width: 100%;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-layout label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.auth-layout input[type='email'],
+.auth-layout input[type='password'],
+.auth-layout input[type='text'],
+.auth-layout input:not([type]) {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: var(--font);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  box-sizing: border-box;
+}
+
+.auth-layout input::placeholder {
+  color: var(--text-muted);
+}
+
+.auth-layout input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.auth-layout button[type='submit'],
+.auth-layout button.primary,
+.auth-layout a[role='button'] {
+  width: 100%;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: var(--font);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #0a0a0b;
+  cursor: pointer;
+  transition: background var(--transition), box-shadow var(--transition);
+  margin-top: 4px;
+}
+
+.auth-layout button[type='submit']:hover,
+.auth-layout button.primary:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 0 24px rgba(167, 139, 250, 0.35);
+}
+
+.auth-layout a:not([role='button']) {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.auth-layout a:not([role='button']):hover {
+  text-decoration: underline;
+}
+
+.auth-layout .auth-card--handler > div {
+  width: 100%;
+}
+
+.auth-layout [data-stack],
+.auth-layout [class*='stack'] {
+  width: 100%;
+}
+
+.auth-layout .auth-card--handler p,
+.auth-layout .auth-card--handler span {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Hide stuck loading spinners on view-password and sign-in (Stack Auth) */
+.auth-layout .auth-card--handler [class*='animate-spin'],
+.auth-layout .auth-card--handler [class*='loading'] svg,
+.auth-layout .auth-card--handler button svg[class*='spin'],
+.auth-layout .auth-card--handler svg[class*='spin'],
+.auth-layout .auth-card--handler [class*='Spinner'],
+.auth-layout .auth-card--handler [class*='spinner'],
+.auth-layout .auth-card--handler button [class*='animate'],
+.auth-layout .auth-card--handler [role='status'] svg {
+  display: none !important;
+}
+
+/* Sign-in button: hide spinner SVG only, keep label visible */
+.auth-layout .auth-card--handler button[type='submit'] svg,
+.auth-layout .auth-card--handler form button.primary svg {
+  display: none !important;
+}
+
+/* Password field: hide loading indicator next to eye, keep only toggle */
+.auth-layout .auth-card--handler label + div > div:last-child [class*='animate'],
+.auth-layout .auth-card--handler input[type='password'] ~ div [class*='animate-spin'],
+.auth-layout .auth-card--handler [class*='password'] [class*='loading'] {
+  display: none !important;
+}
+
+/* View password button: clear icon-only button style */
+.auth-layout .auth-card--handler button[type='button'][aria-label*='password'],
+.auth-layout .auth-card--handler button[type='button'][aria-label*='Password'],
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']):hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) svg:not([class*='spin']) {
+  display: block !important;
+  width: 20px;
+  height: 20px;
+}
+
+/* Form field spacing: any wrapper that contains an input */
+.auth-layout .auth-card--handler > div > div,
+.auth-layout .auth-card--handler form > div {
+  margin-bottom: 4px;
+}
+
+.auth-layout .auth-card--handler input + div,
+.auth-layout .auth-card--handler label + input {
+  margin-top: 0;
+}
+
+/* Secondary / outline buttons (e.g. "Sign in with Google") */
+.auth-layout button:not([type='submit']):not(.primary) {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 500;
+  font-family: var(--font);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  margin-top: 4px;
+}
+
+.auth-layout button:not([type='submit']):not(.primary):hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+/* Dividers / "or" between auth options */
+.auth-layout hr,
+.auth-layout [class*='divider'] {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0;
 }
 
 /* Loading */
@@ -381,4 +583,154 @@ body {
 .field + .field,
 .field-margin {
   margin-top: 16px;
+}
+
+/* ========== Mobile app-like layout (max-width: 768px) ========== */
+@media (max-width: 768px) {
+  .app-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .app-header {
+    padding: 0 16px 0 20px;
+    height: 56px;
+    min-height: 56px;
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+
+  .app-header h1 {
+    font-size: 1rem;
+  }
+
+  .app-header .user-meta span {
+    display: none;
+  }
+
+  .app-header .user-meta {
+    gap: 8px;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .app-main {
+    padding: 24px 20px 100px;
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    padding-bottom: max(100px, calc(80px + env(safe-area-inset-bottom)));
+  }
+
+  .page-hero {
+    margin-bottom: 24px;
+  }
+
+  .page-hero h2 {
+    font-size: 1.375rem;
+  }
+
+  .page-hero p {
+    font-size: 14px;
+  }
+
+  .card {
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  /* 16px input font prevents iOS zoom on focus */
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px;
+    padding: 14px 16px;
+    min-height: 48px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .textarea {
+    min-height: 96px;
+  }
+
+  .select {
+    padding-right: 44px;
+  }
+
+  .btn {
+    min-height: 48px;
+    padding: 14px 20px;
+    font-size: 16px;
+  }
+
+  .btn-primary--inline {
+    display: none;
+  }
+
+  /* Bottom toolbar: visible only on mobile */
+  .app-bottom-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 20px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    padding-left: max(20px, env(safe-area-inset-left));
+    padding-right: max(20px, env(safe-area-inset-right));
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--border);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    z-index: 50;
+  }
+
+  .app-bottom-bar__action {
+    width: 100%;
+    max-width: 360px;
+    min-height: 52px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+  }
+
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 769px) {
+  .app-bottom-bar {
+    display: none;
+  }
+}
+
+/* Auth page: prevent zoom on input focus (mobile) */
+@media (max-width: 768px) {
+  .auth-layout input[type='email'],
+  .auth-layout input[type='password'],
+  .auth-layout input[type='text'],
+  .auth-layout input:not([type]) {
+    font-size: 16px;
+    min-height: 48px;
+    padding: 14px 16px;
+  }
+
+  .auth-layout .auth-card--handler {
+    max-width: 100%;
+    margin: 0 16px;
+    padding: 24px 20px 28px;
+    padding-bottom: max(28px, env(safe-area-inset-bottom));
+  }
+
+  .auth-layout {
+    padding: 24px 0 24px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
 }
