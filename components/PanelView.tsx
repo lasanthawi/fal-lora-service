@@ -19,6 +19,13 @@ type PublishResult = {
   instagram?: unknown;
 } | null;
 
+type RandomPreview = {
+  image_url: string;
+  caption: string;
+  theme: string;
+  shot_type: string;
+} | null;
+
 export default function PanelView() {
   const user = useUser({ or: 'return-null' });
   const router = useRouter();
@@ -34,6 +41,13 @@ export default function PanelView() {
   const [caption, setCaption] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PublishResult>(null);
+
+  // Random post flow: step 1 preview, step 2 publish
+  const [randomPreview, setRandomPreview] = useState<RandomPreview>(null);
+  const [randomPreviewCaption, setRandomPreviewCaption] = useState('');
+  const [randomLoading, setRandomLoading] = useState(false);
+  const [randomPublishLoading, setRandomPublishLoading] = useState(false);
+  const [randomPublishResult, setRandomPublishResult] = useState<PublishResult>(null);
 
   if (user) hasSeenUser.current = true;
 
@@ -116,6 +130,61 @@ export default function PanelView() {
     }
   };
 
+  const handleRandomGenerate = async () => {
+    setRandomLoading(true);
+    setRandomPreview(null);
+    setRandomPreviewCaption('');
+    setRandomPublishResult(null);
+    try {
+      const res = await fetch('/api/random-preview', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        setRandomPublishResult({ success: false, error: data.error || res.statusText });
+        return;
+      }
+      setRandomPreview({
+        image_url: data.image_url,
+        caption: data.caption ?? '',
+        theme: data.theme ?? '',
+        shot_type: data.shot_type ?? '',
+      });
+      setRandomPreviewCaption(data.caption ?? '');
+    } catch (err) {
+      setRandomPublishResult({ success: false, error: err instanceof Error ? err.message : 'Request failed' });
+    } finally {
+      setRandomLoading(false);
+    }
+  };
+
+  const handleRandomPublish = async () => {
+    if (!randomPreview?.image_url) return;
+    setRandomPublishLoading(true);
+    setRandomPublishResult(null);
+    try {
+      const res = await fetch('/api/publish-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_url: randomPreview.image_url,
+          caption: randomPreviewCaption.trim() || randomPreview.caption,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRandomPublishResult({ success: false, error: data.error || res.statusText });
+        return;
+      }
+      setRandomPublishResult({
+        success: true,
+        instagram: data.instagram,
+      });
+    } catch (err) {
+      setRandomPublishResult({ success: false, error: err instanceof Error ? err.message : 'Request failed' });
+    } finally {
+      setRandomPublishLoading(false);
+    }
+  };
+
   // Only show loading on initial auth check. Once we've shown the form, don't flip back
   // when useUser briefly returns undefined on re-renders (e.g. while typing), so input state isn't lost.
   if (!hasSeenUser.current && user === undefined) {
@@ -148,6 +217,91 @@ export default function PanelView() {
           <h2>Generate{' & '}publish</h2>
           <p>Set the scene and style. One click to generate an image and post to Instagram.</p>
         </div>
+
+        <section className="card card--random">
+          <h3 className="card-title">Random post</h3>
+          <p className="card-desc">
+            <strong>Step 1:</strong> Generate a random image and caption (same as test generate). <strong>Step 2:</strong> Review URL and caption below, edit if needed, then confirm to publish to Instagram (same as test Instagram post).
+          </p>
+          <div className="random-flow">
+            <div className="random-step">
+              <span className="random-step-label">Step 1</span>
+              <button
+                type="button"
+                onClick={handleRandomGenerate}
+                disabled={randomLoading}
+                className="btn btn-secondary"
+              >
+                {randomLoading ? 'Generating…' : 'Generate random (image + caption)'}
+              </button>
+            </div>
+            {randomPreview && (
+              <div className="random-preview">
+                <div className="random-preview-image">
+                  <span className="label">Image URL (for confirmation)</span>
+                  <div className="random-preview-url-row">
+                    <a href={randomPreview.image_url} target="_blank" rel="noopener noreferrer" className="random-preview-link">
+                      {randomPreview.image_url}
+                    </a>
+                    <button
+                      type="button"
+                      className="btn btn-small"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(randomPreview.image_url);
+                      }}
+                      aria-label="Copy image URL"
+                    >
+                      Copy URL
+                    </button>
+                  </div>
+                  <img src={randomPreview.image_url} alt="Generated preview" className="random-preview-img" />
+                </div>
+                <div className="random-preview-meta">
+                  <span className="label">Theme</span> {randomPreview.theme}
+                  <span className="label" style={{ marginTop: 8 }}>Shot</span> {randomPreview.shot_type}
+                </div>
+                <div className="random-preview-caption">
+                  <label className="label" htmlFor="random-caption">Caption (editable before publish)</label>
+                  <textarea
+                    id="random-caption"
+                    className="textarea"
+                    value={randomPreviewCaption}
+                    onChange={(e) => setRandomPreviewCaption(e.target.value)}
+                    rows={4}
+                    placeholder="Caption for Instagram"
+                  />
+                </div>
+                <div className="random-step">
+                  <span className="random-step-label">Step 2</span>
+                  <button
+                    type="button"
+                    onClick={handleRandomPublish}
+                    disabled={randomPublishLoading}
+                    className="btn btn-primary"
+                  >
+                    {randomPublishLoading ? 'Publishing…' : 'Confirm & publish to Instagram'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {randomPublishResult && (
+            <div className={`result-box ${randomPublishResult.success ? 'success' : 'error'}`} style={{ marginTop: 16 }}>
+              {randomPublishResult.success ? (
+                <>
+                  <strong>Published to Instagram.</strong>
+                  {randomPublishResult.instagram && typeof randomPublishResult.instagram === 'object' && 'permalink' in randomPublishResult.instagram && (randomPublishResult.instagram as { permalink?: string }).permalink && (
+                    <p style={{ margin: '8px 0 0 0' }}>
+                      <a href={(randomPublishResult.instagram as { permalink: string }).permalink} target="_blank" rel="noopener noreferrer">View post</a>
+                    </p>
+                  )}
+                </>
+              ) : (
+                <strong>Error:</strong> {randomPublishResult.error}
+              )}
+            </div>
+          )}
+        </section>
 
         <form id="panel-form" onSubmit={handleSubmit}>
           <input type="hidden" name="preset" value={preset ?? ''} />

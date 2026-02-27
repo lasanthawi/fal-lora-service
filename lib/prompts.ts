@@ -41,6 +41,86 @@ const OCCASIONS = [
   'at a cafe with a notebook and laptop',
 ] as const;
 
+/** Framing tier: shot type and composition are chosen together so they never conflict (e.g. no "long shot" + "close-up"). */
+const FRAMING_TIERS = [
+  {
+    tier: 'close' as const,
+    shotTypes: [
+      'close-up portrait, head and shoulders, shallow depth of field',
+      'tight portrait, face and shoulders in frame, professional',
+      'candid close-up, natural expression, documentary style',
+    ],
+    compositions: [
+      'close-up, face and shoulders in frame',
+      'tight portrait, head and shoulders',
+    ],
+  },
+  {
+    tier: 'medium' as const,
+    shotTypes: [
+      'medium shot from waist up, editorial feel',
+      'medium long shot, from knees up',
+      'over-the-shoulder moment, storytelling',
+    ],
+    compositions: [
+      'medium shot, waist up',
+      'medium shot, knees up',
+      'medium long shot, knees up in frame',
+    ],
+  },
+  {
+    tier: 'full' as const,
+    shotTypes: [
+      'full-body shot, environmental portrait',
+      'wide shot, person in context, editorial',
+      'lifestyle shot, full figure in frame, authentic',
+    ],
+    compositions: [
+      'full body in frame, person in environment',
+      'wide shot, person in context, environmental',
+      'wide establishing shot, person in environment',
+    ],
+  },
+  {
+    tier: 'long' as const,
+    shotTypes: [
+      'long shot, full body small in frame, figure in environment',
+      'long shot, person in urban or natural landscape',
+      'extreme long shot, environmental, figure distant',
+      'street style photography, figure in urban backdrop',
+    ],
+    compositions: [
+      'long shot, full figure small in frame, environmental',
+      'long shot, figure in landscape or urban setting',
+      'extreme long shot, figure distant in scene',
+      'two-shot distance, subject in environment, figure small',
+    ],
+  },
+] as const;
+
+type FramingTier = (typeof FRAMING_TIERS)[number]['tier'];
+
+/** Pick one framing tier, then one shot type and one composition from that tier (no portrait + long-shot mismatch). */
+function getCoherentFraming(): {
+  shotType: string;
+  composition: string;
+  tier: FramingTier;
+} {
+  const tier = getRandomElement(FRAMING_TIERS);
+  return {
+    shotType: getRandomElement(tier.shotTypes),
+    composition: getRandomElement(tier.compositions),
+    tier: tier.tier,
+  };
+}
+
+/** Lens choice aligned with framing: wide for long/full body, portrait for close-up. */
+function getLensForTier(tier: FramingTier): string {
+  if (tier === 'long' || tier === 'full') return getRandomElement(LENS_WIDE);
+  if (tier === 'close') return getRandomElement(LENS_PORTRAIT);
+  return getRandomElement(LENS_MID);
+}
+
 const SHOT_TYPES = [
   'candid shot, natural expression, documentary style',
   'portrait, shallow depth of field, professional',
@@ -88,12 +168,24 @@ const CAMERA_ANGLES = [
   'over-the-shoulder perspective',
 ] as const;
 
-/** Lens / focal length — affects look and compression */
-const LENS_CHOICES = [
+/** Lens / focal length — affects look and compression. Wide for long/full, longer for close/medium. */
+const LENS_WIDE = [
+  '24mm wide angle, environmental context',
   '35mm lens, environmental, slight wide',
+] as const;
+const LENS_PORTRAIT = [
+  '85mm lens, compressed background, portrait feel',
+  '50mm lens at f/2.8, shallow depth of field',
+  '70mm telephoto, candid compression',
+] as const;
+const LENS_MID = [
+  '50mm lens at f/4, more in focus',
+  '35mm lens, environmental, slight wide',
+] as const;
+const LENS_CHOICES = [
+  ...LENS_WIDE,
   '50mm lens at f/2.8, shallow depth of field',
   '85mm lens, compressed background, portrait feel',
-  '24mm wide angle, environmental context',
   '70mm telephoto, candid compression',
   '50mm lens at f/4, more in focus',
 ] as const;
@@ -271,18 +363,16 @@ export function buildEntrepreneurPrompt(): {
   shotType: ShotType;
 } {
   const theme = getRandomElement(OCCASIONS);
-  const shotType = getRandomElement(SHOT_TYPES);
-  const composition = getRandomElement(COMPOSITIONS);
+  const { shotType, composition, tier } = getCoherentFraming();
   const angle = getRandomElement(CAMERA_ANGLES);
-  const lens = getRandomElement(LENS_CHOICES);
+  const lens = getLensForTier(tier);
   const clothing = getRandomElement(CLOTHING_OPTIONS);
   const pose = getRandomElement(POSES_AND_MOODS);
   const armVisible =
     (CLOTHING_SHORT_SLEEVE as readonly string[]).includes(clothing) ||
     randomChance(0.4);
 
-  const base = [
-    'A professional photograph capturing a distinguished gentleman in his mid-30s,',
+  const personDesc = [
     theme + ',',
     pose + ',',
     'predominantly black hair with only slight grey at the temples or none, well-groomed, styled with subtle volume, exuding sophistication and approachability.',
@@ -290,26 +380,39 @@ export function buildEntrepreneurPrompt(): {
     'He wears ' + clothing + '.',
     'Left arm from shoulder to elbow has a Maori-style (tribal, bold black lines) tattoo; when short sleeves or full arm visible the tattoo is clearly visible; no other visible tattoos.',
   ];
-
   if (armVisible) {
-    base.push(getRandomElement(TATTOO_PHRASES));
+    personDesc.push(getRandomElement(TATTOO_PHRASES));
   }
 
-  const framing = [
-    shotType + '.',
-    composition + ',',
-    angle + '.',
+  const framingLine = shotType + '. ' + composition + ', ' + angle + '.';
+  const lighting =
     'Natural lighting creates gentle highlights and shadows' +
-      (armVisible ? ', emphasizing tattoo and facial features' : ', flattering and natural') +
-      '.',
+    (armVisible ? ', emphasizing tattoo and facial features' : ', flattering and natural') +
+    '.';
+  const tail = [
     'Shot with a professional ' + lens + ', candid authentic moment.',
     'Cinematic color grading with warm, professional tones.',
     'Photorealistic quality, 8K resolution, high-end photography aesthetic.',
-  ];
+  ].join(' ');
 
-  const prompt = [...base, ...framing].join(' ');
+  // For long/full-body: lead with framing so the model commits to wide shot first, then person details.
+  const prompt =
+    tier === 'long' || tier === 'full'
+      ? [
+          'A professional photograph, ' + framingLine,
+          'A man in his mid-30s in the scene, ' + personDesc.join(' '),
+          lighting,
+          tail,
+        ].join(' ')
+      : [
+          'A professional photograph capturing a distinguished gentleman in his mid-30s,',
+          ...personDesc,
+          framingLine,
+          lighting,
+          tail,
+        ].join(' ');
 
-  return { prompt, theme, shotType };
+  return { prompt, theme, shotType: shotType as ShotType };
 }
 
 /**
@@ -328,10 +431,9 @@ export function buildEntrepreneurPromptFromOptions(options: PromptOptions = {}):
   const theme: string = options.surrounding
     ? `${occasionPart}, ${options.surrounding} setting`
     : occasionPart;
-  const shotType = getRandomElement(SHOT_TYPES);
-  const composition = getRandomElement(COMPOSITIONS);
+  const { shotType, composition, tier } = getCoherentFraming();
   const angle = getRandomElement(CAMERA_ANGLES);
-  const lens = getRandomElement(LENS_CHOICES);
+  const lens = getLensForTier(tier);
   const clothing =
     options.clothing || getRandomElement(CLOTHING_OPTIONS);
   const pose =
@@ -340,8 +442,7 @@ export function buildEntrepreneurPromptFromOptions(options: PromptOptions = {}):
     (CLOTHING_SHORT_SLEEVE as readonly string[]).includes(clothing) ||
     randomChance(0.4);
 
-  const base = [
-    'A professional photograph capturing a distinguished gentleman in his mid-30s,',
+  const personDesc = [
     theme + ',',
     pose + ',',
     'predominantly black hair with only slight grey at the temples or none, well-groomed, styled with subtle volume, exuding sophistication and approachability.',
@@ -349,27 +450,40 @@ export function buildEntrepreneurPromptFromOptions(options: PromptOptions = {}):
     'He wears ' + clothing + '.',
     'Left arm from shoulder to elbow has a Maori-style (tribal, bold black lines) tattoo; when short sleeves or full arm visible the tattoo is clearly visible; no other visible tattoos.',
   ];
-
   if (armVisible) {
-    base.push(getRandomElement(TATTOO_PHRASES));
+    personDesc.push(getRandomElement(TATTOO_PHRASES));
   }
 
-  const framing = [
-    shotType + '.',
-    composition + ',',
-    angle + '.',
+  const framingLine = shotType + '. ' + composition + ', ' + angle + '.';
+  const lighting =
     'Natural lighting creates gentle highlights and shadows' +
-      (armVisible ? ', emphasizing tattoo and facial features' : ', flattering and natural') +
-      '.',
-    ...(options.vibe ? [`${options.vibe} vibe.`] : []),
+    (armVisible ? ', emphasizing tattoo and facial features' : ', flattering and natural') +
+    '.';
+  const vibeLine = options.vibe ? `${options.vibe} vibe. ` : '';
+  const tail = [
+    vibeLine,
     'Shot with a professional ' + lens + ', candid authentic moment.',
     'Cinematic color grading with warm, professional tones.',
     'Photorealistic quality, 8K resolution, high-end photography aesthetic.',
-  ];
+  ].join(' ');
 
-  const prompt = [...base, ...framing].join(' ');
+  const prompt =
+    tier === 'long' || tier === 'full'
+      ? [
+          'A professional photograph, ' + framingLine,
+          'A man in his mid-30s in the scene, ' + personDesc.join(' '),
+          lighting,
+          tail,
+        ].join(' ')
+      : [
+          'A professional photograph capturing a distinguished gentleman in his mid-30s,',
+          ...personDesc,
+          framingLine,
+          lighting,
+          tail,
+        ].join(' ');
 
-  return { prompt, theme, shotType };
+  return { prompt, theme, shotType: shotType as ShotType };
 }
 
 export { OCCASIONS, SHOT_TYPES, CLOTHING_OPTIONS, POSES_AND_MOODS };

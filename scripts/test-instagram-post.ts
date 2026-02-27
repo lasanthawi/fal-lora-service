@@ -32,7 +32,7 @@ const CRON_URL = `${API_URL.replace(/\/$/, '')}/api/cron/instagram-post`;
 const CRON_SECRET = process.env.CRON_SECRET;
 
 const DEFAULT_TEST_IMAGE_URL =
-  'https://v3b.fal.media/files/b/0a901eb8/4-Qde5e9xf8Ob-hMc71a__05b817d729a240fabd884fc87fefba52.jpg';
+  'https://v3b.fal.media/files/b/0a902c15/BFfoj1bw2VJbNkqVycZqz_73fd4bfc08234c1194de0e08c671034d.jpg';
 
 async function main() {
   const fullFlow =
