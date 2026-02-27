@@ -8,8 +8,18 @@ import { postImageToInstagram } from '../../lib/composio-instagram';
 const DEFAULT_LORA_URL =
   'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
 
+export const config = {
+  api: { bodyParser: true },
+};
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') {
+  const method = (req.method ?? '').toUpperCase();
+  if (method === 'OPTIONS') {
+    res.setHeader('Allow', 'OPTIONS, POST');
+    return res.status(204).end();
+  }
+  if (method !== 'POST') {
+    res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
