@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 interface LoRARequest {
-  prompt: string;
-  lora_url?: string;
-  fal_api_key?: string;
-  image_size?: 'square' | 'landscape' | 'portrait';
-  async?: boolean;
+  prompt?: unknown;
+  lora_url?: unknown;
+  fal_api_key?: unknown;
+  image_size?: unknown;
+  async?: unknown;
 }
 
 interface FalQueueResponse {
@@ -22,6 +22,53 @@ const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXG
 const FAL_CDN_BASE = 'https://v3b.fal.media';
 const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-lora';
 const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-lora';
+type ImageSize = 'square' | 'landscape' | 'portrait';
+
+function toTrimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function parseLoRARequest(rawBody: unknown): LoRARequest {
+  if (!rawBody) return {};
+
+  if (typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
+    return rawBody as LoRARequest;
+  }
+
+  const rawText = (Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody)).trim();
+  if (!rawText) return {};
+
+  try {
+    const parsed = JSON.parse(rawText) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as LoRARequest;
+    }
+  } catch {
+    // Not JSON; continue parsing.
+  }
+
+  const urlEncoded = new URLSearchParams(rawText);
+  if (Array.from(urlEncoded.keys()).length > 0) {
+    return Object.fromEntries(urlEncoded.entries()) as LoRARequest;
+  }
+
+  // Fallback for text/plain payloads: body is the prompt.
+  return { prompt: rawText };
+}
+
+function normalizeImageSize(value: unknown): ImageSize {
+  const normalized = toTrimmedString(value);
+  if (normalized === 'landscape' || normalized === 'portrait') return normalized;
+  return 'square';
+}
+
+function normalizeAsync(value: unknown): boolean {
+  if (typeof value === 'boolean') return value;
+  const normalized = toTrimmedString(value);
+  return normalized != null && normalized.toLowerCase() === 'true';
+}
 
 function normalizeFalImageUrl(url: string): string {
   const trimmed = (url || '').trim();
@@ -48,7 +95,7 @@ async function submitToFal(
   prompt: string,
   loraUrl: string,
   apiKey: string,
-  imageSize: string
+  imageSize: ImageSize
 ): Promise<string> {
   const response = await fetch(FAL_SUBMIT_URL, {
     method: 'POST',
@@ -141,10 +188,15 @@ export default async function handler(
   }
 
   try {
-    const { prompt, lora_url, fal_api_key, image_size = 'square', async: asyncMode }: LoRARequest = req.body;
+    const body = parseLoRARequest(req.body);
+    const prompt = toTrimmedString(body.prompt);
+    const lora_url = toTrimmedString(body.lora_url);
+    const fal_api_key = toTrimmedString(body.fal_api_key);
+    const image_size = normalizeImageSize(body.image_size);
+    const asyncMode = normalizeAsync(body.async);
 
     if (!prompt) {
-      return res.status(400).json({ error: 'prompt is required' });
+      return res.status(400).json({ error: 'prompt is required and cannot be empty' });
     }
 
     const apiKey = fal_api_key || process.env.FAL_API_KEY;
