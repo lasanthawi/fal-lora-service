@@ -14,6 +14,7 @@
     "test:instagram:full": "tsx scripts/test-instagram-post.ts --full"
   },
   "dependencies": {
+    "@babel/runtime": "^7.28.6",
     "@stackframe/stack": "^2.8.0",
     "@vercel/node": "^3.0.0",
     "next": "^14.2.0",
