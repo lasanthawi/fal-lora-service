@@ -100,7 +100,7 @@ const BY_THEME: Record<string, string[]> = {
     'The kind of break that actually fixes things.',
   ],
   food: [
-    'The meeting that doesn't need a calendar.',
+    "The meeting that doesn't need a calendar.",
     'Good food, better conversation.',
     'Where the real sync happens.',
   ],
