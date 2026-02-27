@@ -5,8 +5,25 @@
 
 const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-lora';
 const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-lora';
+const FAL_CDN_BASE = 'https://v3b.fal.media';
 const MAX_POLL_ATTEMPTS = 90;  // 90 * 2s = 3 min max (image usually ready in ~1 min)
 const POLL_INTERVAL = 2000;    // Poll every 2s so we fetch result soon after completion
+
+/** Normalize Fal image URL to canonical v3b.fal.media CDN (relative paths or other hosts → stable URL). */
+function normalizeFalImageUrl(url: string): string {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith('/')) return FAL_CDN_BASE + trimmed;
+  try {
+    const u = new URL(trimmed);
+    if (u.pathname.startsWith('/files/') && u.hostname !== 'v3b.fal.media') {
+      return FAL_CDN_BASE + u.pathname + u.search;
+    }
+  } catch {
+    // not a valid URL, return as-is
+  }
+  return trimmed;
+}
 
 export interface FalGenerateOptions {
   prompt: string;
@@ -114,7 +131,7 @@ export async function generateImageWithFal(options: FalGenerateOptions): Promise
 
       const img = result.images[0];
       return {
-        imageUrl: img.url,
+        imageUrl: normalizeFalImageUrl(img.url),
         requestId,
         seed: result.seed,
         width: img.width,

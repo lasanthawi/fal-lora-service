@@ -26,6 +26,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const falKey = process.env.FAL_API_KEY;
   const composioKey = process.env.COMPOSIO_API_KEY;
   const composioUserId = process.env.COMPOSIO_ENTITY_ID;
+  const composioConnectedAccountId = process.env.COMPOSIO_CONNECTED_ACCOUNT_ID?.trim();
   const igUserId = process.env.INSTAGRAM_IG_USER_ID;
   const loraUrl = process.env.LORA_URL || DEFAULT_LORA_URL;
 
@@ -35,7 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!composioKey || !composioUserId) {
     return res.status(500).json({ error: 'COMPOSIO_API_KEY and COMPOSIO_ENTITY_ID required' });
   }
-  // INSTAGRAM_IG_USER_ID optional: if unset, Composio will resolve it from the connected account (INSTAGRAM_GET_USER_INFO).
+  // INSTAGRAM_IG_USER_ID optional: if unset, Composio resolves it from the connected account.
+  // COMPOSIO_CONNECTED_ACCOUNT_ID optional: when you have multiple IG accounts under one user, set to the ACCOUNT ID (ca_xxx) to pick which one.
 
   const body = typeof req.body === 'object' ? req.body : {};
   const customCaption = (body.caption as string)?.trim();
@@ -109,6 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const igResult = await postImageToInstagram({
       apiKey: composioKey,
       userId: composioUserId,
+      ...(composioConnectedAccountId ? { connectedAccountId: composioConnectedAccountId } : {}),
       ...(igUserId ? { igUserId } : {}),
       imageUrl,
       caption,

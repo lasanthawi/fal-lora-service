@@ -19,8 +19,24 @@ interface FalResultResponse {
 }
 
 const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
+const FAL_CDN_BASE = 'https://v3b.fal.media';
 const FAL_SUBMIT_URL = 'https://queue.fal.run/fal-ai/flux-lora';
 const FAL_STATUS_BASE = 'https://queue.fal.run/fal-ai/flux-lora';
+
+function normalizeFalImageUrl(url: string): string {
+  const trimmed = (url || '').trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith('/')) return FAL_CDN_BASE + trimmed;
+  try {
+    const u = new URL(trimmed);
+    if (u.pathname.startsWith('/files/') && u.hostname !== 'v3b.fal.media') {
+      return FAL_CDN_BASE + u.pathname + u.search;
+    }
+  } catch {
+    /* ignore */
+  }
+  return trimmed;
+}
 const MAX_POLL_ATTEMPTS = 60;
 const POLL_INTERVAL = 5000;
 
@@ -162,7 +178,7 @@ export default async function handler(
       throw new Error('No images in result');
     }
 
-    const imageUrl = result.images[0].url;
+    const imageUrl = normalizeFalImageUrl(result.images[0].url);
     console.log(`Image generated: ${imageUrl.substring(0, 60)}...`);
 
     return res.status(200).json({
