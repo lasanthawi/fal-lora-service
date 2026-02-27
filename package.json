@@ -4,7 +4,8 @@
   "description": "Vercel serverless API for Fal AI LoRA image generation",
   "main": "api/generate.ts",
   "scripts": {
-    "dev": "vercel dev",
+    "dev": "next dev",
+    "dev:vercel": "vercel dev",
     "build": "next build",
     "start": "next start",
     "build:tsc": "tsc",
