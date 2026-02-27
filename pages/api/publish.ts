@@ -1,9 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { stackServerApp } from '../../stack.config';
-import { buildEntrepreneurPromptFromOptions, type PromptOptions, PRESETS } from '../../lib/prompts';
-import { generateCaptionForPost } from '../../lib/caption';
-import { generateImageWithFal } from '../../lib/fal';
-import { postImageToInstagram } from '../../lib/composio-instagram';
 
 const DEFAULT_LORA_URL =
   'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
@@ -20,8 +15,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
   if (method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({
+      error: 'Method not allowed',
+      receivedMethod: req.method,
+      hint: 'Use POST. If you see this, the route is deployed but the request method was not POST.',
+    });
   }
+
+  // Dynamic imports so a load error in deps returns 500 instead of breaking the route (405 on Vercel)
+  const { stackServerApp } = await import('../../stack.config');
+  const { buildEntrepreneurPromptFromOptions, PRESETS } = await import('../../lib/prompts');
+  const { generateCaptionForPost } = await import('../../lib/caption');
+  const { generateImageWithFal } = await import('../../lib/fal');
+  const { postImageToInstagram } = await import('../../lib/composio-instagram');
+  type PromptOptions = import('../../lib/prompts').PromptOptions;
 
   const requestLike = {
     headers: {
