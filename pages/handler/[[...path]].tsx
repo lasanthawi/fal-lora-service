@@ -1,6 +1,49 @@
+import React, { Suspense } from 'react';
 import { StackHandler } from '@stackframe/stack';
 import { useRouter } from 'next/router';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+
+/** Catches NEXT_REDIRECT thrown by Stack Auth and performs client-side redirect. */
+class RedirectErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { redirectUrl: string | null }
+> {
+  state = { redirectUrl: null as string | null };
+
+  static getDerivedStateFromError(error: unknown) {
+    const digest = (error as { digest?: string })?.digest;
+    if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+      const parts = digest.split(';');
+      const url = parts[2]; // NEXT_REDIRECT;replace;URL;status;
+      if (url) return { redirectUrl: url };
+    }
+    return null;
+  }
+
+  componentDidCatch(error: unknown) {
+    const digest = (error as { digest?: string })?.digest;
+    if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) {
+      const parts = digest.split(';');
+      const url = parts[2];
+      if (url && typeof window !== 'undefined') {
+        window.location.replace(url);
+        return;
+      }
+    }
+    throw error;
+  }
+
+  render() {
+    if (this.state.redirectUrl) {
+      return (
+        <div className="loading-screen">
+          <span className="loading-dots">Redirecting</span>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export async function getServerSideProps() {
   return { props: {} };
@@ -8,17 +51,45 @@ export async function getServerSideProps() {
 
 export default function HandlerPage() {
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const path = (router.query.path as string[] | undefined) ?? [];
   const searchParams = useMemo(() => {
     if (typeof window === 'undefined') return {};
     return Object.fromEntries(new URLSearchParams(window.location.search));
   }, [router.asPath]);
 
+  if (!mounted) {
+    return (
+      <div className="loading-screen">
+        <span className="loading-dots">Loading</span>
+      </div>
+    );
+  }
+
   return (
-    <StackHandler
-      fullPage={true}
-      params={{ path }}
-      searchParams={searchParams}
-    />
+    <RedirectErrorBoundary>
+      <div className="auth-layout">
+        <div className="auth-brand">
+          <span className="auth-product">Create</span>
+          <h1>Welcome back</h1>
+          <p>Sign in to continue to your dashboard</p>
+        </div>
+        <Suspense
+          fallback={
+            <div className="loading-screen loading-screen--auth">
+              <span className="loading-dots">Loading</span>
+            </div>
+          }
+        >
+          <StackHandler
+            fullPage={true}
+            params={{ path }}
+            searchParams={searchParams}
+          />
+        </Suspense>
+      </div>
+    </RedirectErrorBoundary>
   );
 }

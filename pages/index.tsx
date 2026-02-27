@@ -1,24 +1,38 @@
 import { useUser } from '@stackframe/stack';
 import { useRouter } from 'next/router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export async function getServerSideProps() {
   return { props: {} };
 }
 
-export default function HomePage() {
+/** Only rendered after mount so useUser never runs during SSR. */
+function HomeRedirect() {
   const user = useUser({ or: 'return-null' });
   const router = useRouter();
-
   useEffect(() => {
     if (user === undefined) return;
     if (user) router.replace('/panel');
     else router.replace('/handler/signin');
   }, [user, router]);
-
   return (
-    <div style={{ fontFamily: 'system-ui', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
-      <p>Redirecting…</p>
+    <div className="loading-screen">
+      <span className="loading-dots">Redirecting</span>
     </div>
   );
+}
+
+export default function HomePage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <div className="loading-screen">
+        <span className="loading-dots">Loading</span>
+      </div>
+    );
+  }
+
+  return <HomeRedirect />;
 }
