@@ -98,7 +98,15 @@ export default function PanelView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: PublishResult;
+      try {
+        data = raw
+          ? (JSON.parse(raw) as PublishResult)
+          : { success: false, error: `Request failed (${res.status})` };
+      } catch {
+        data = { success: false, error: `Request failed (${res.status})` };
+      }
       setResult(data);
       if (!res.ok) return;
     } catch (err) {
