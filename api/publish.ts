@@ -8,61 +8,32 @@ import { postImageToInstagram } from '../lib/composio-instagram';
 const DEFAULT_LORA_URL =
   'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
 
-type PublishBody = Record<string, unknown>;
-
-function toTrimmedString(value: unknown): string | undefined {
-  if (typeof value !== 'string') return undefined;
-  const trimmed = value.trim();
-  return trimmed || undefined;
-}
-
-function parsePublishBody(rawBody: unknown): PublishBody {
-  if (!rawBody) return {};
-
-  if (typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
-    return rawBody as PublishBody;
-  }
-
-  const rawText = (Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody)).trim();
-  if (!rawText) return {};
-
-  try {
-    const parsed = JSON.parse(rawText) as unknown;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      return parsed as PublishBody;
-    }
-  } catch {
-    // Not JSON; continue parsing.
-  }
-
-  const urlEncoded = new URLSearchParams(rawText);
-  if (Array.from(urlEncoded.keys()).length > 0) {
-    return Object.fromEntries(urlEncoded.entries());
-  }
-
-  return {};
-}
-
-function assignPromptOption(options: PromptOptions, key: keyof PromptOptions, value: unknown): void {
-  const normalized = toTrimmedString(value);
-  if (normalized) options[key] = normalized;
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const requestLike = {
+function toRequestLike(req: VercelRequest): { headers: { get: (name: string) => string | null } } {
+  return {
     headers: {
       get: (name: string) => {
-        const headerValue = req.headers[name];
-        return (Array.isArray(headerValue) ? headerValue[0] : headerValue) ?? null;
+        const v = req.headers[name];
+        if (v == null) return null;
+        return Array.isArray(v) ? v[0] : v;
       },
     },
   };
+}
 
-  const user = await stackServerApp.getUser({ tokenStore: requestLike });
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'OPTIONS, POST');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const user = await stackServerApp.getUser({ tokenStore: toRequestLike(req) });
   if (!user) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
@@ -81,22 +52,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(500).json({ error: 'COMPOSIO_API_KEY and COMPOSIO_ENTITY_ID required' });
   }
 
-  const body = parsePublishBody(req.body);
-  const presetName = toTrimmedString(body.preset);
-  const customCaption = toTrimmedString(body.caption);
+  const body = typeof req.body === 'object' ? req.body : {};
+  const presetName = (body.preset as string)?.trim();
+  const customCaption = (body.caption as string)?.trim();
   const options: PromptOptions = {};
 
   if (presetName && PRESETS[presetName]) {
     Object.assign(options, PRESETS[presetName]);
   }
-
-  assignPromptOption(options, 'postIdea', body.postIdea);
-  assignPromptOption(options, 'occasion', body.occasion);
-  assignPromptOption(options, 'vibe', body.vibe);
-  assignPromptOption(options, 'mood', body.mood);
-  assignPromptOption(options, 'clothing', body.clothing);
-  assignPromptOption(options, 'expression', body.expression);
-  assignPromptOption(options, 'surrounding', body.surrounding);
+  if (body.postIdea != null) options.postIdea = String(body.postIdea).trim();
+  if (body.occasion != null) options.occasion = String(body.occasion).trim();
+  if (body.vibe != null) options.vibe = String(body.vibe).trim();
+  if (body.mood != null) options.mood = String(body.mood).trim();
+  if (body.clothing != null) options.clothing = String(body.clothing).trim();
+  if (body.expression != null) options.expression = String(body.expression).trim();
+  if (body.surrounding != null) options.surrounding = String(body.surrounding).trim();
 
   try {
     const { prompt, theme, shotType } = buildEntrepreneurPromptFromOptions(options);
@@ -113,13 +83,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       apiKey: falKey,
       imageSize: 'square',
     });
+    const imageUrl = falResult.imageUrl;
 
     const igResult = await postImageToInstagram({
       apiKey: composioKey,
       userId: composioUserId,
       ...(composioConnectedAccountId ? { connectedAccountId: composioConnectedAccountId } : {}),
       ...(igUserId ? { igUserId } : {}),
-      imageUrl: falResult.imageUrl,
+      imageUrl,
       caption,
     });
 
