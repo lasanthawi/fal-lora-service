@@ -1,13 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    { "src": "api/generate.ts", "use": "@vercel/node" },
-    { "src": "api/cron/instagram-post.ts", "use": "@vercel/node" }
-  ],
-  "routes": [
-    { "src": "/api/generate", "dest": "/api/generate.ts" },
-    { "src": "/api/cron/instagram-post", "dest": "/api/cron/instagram-post.ts" }
-  ],
   "crons": [
     {
       "path": "/api/cron/instagram-post",
