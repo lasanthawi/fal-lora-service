@@ -11,6 +11,14 @@ const CONNECTED_ACCOUNT_ID_PATTERN = /^ca_[A-Za-z0-9_-]+$/;
 const IG_USER_ID_PATTERN = /^\d+$/;
 const URL_PATTERN_ERROR = /did not match the expected pattern/i;
 
+/**
+ * Delay utility for waiting between Instagram API operations.
+ * Error 9007 (media not ready) indicates Instagram needs time to process the upload.
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export interface ComposioInstagramOptions {
   apiKey: string;
   /** Composio user ID (entity ID) that has Instagram connected */
@@ -132,6 +140,9 @@ async function resolveIgUserId(
  * Create media container with image and caption, then publish to Instagram.
  * If igUserId is not set or is the placeholder, it is resolved via INSTAGRAM_GET_USER_INFO.
  * Handles retries for "media not ready" (9007) via Composio's built-in backoff.
+ * CRITICAL: Adds 2.5 second delay after creating media container to ensure Instagram
+ * has time to process the media before attempting to publish. Error 9007
+ * ("The media is not ready for publishing") indicates media processing time is needed.
  */
 export async function postImageToInstagram(
   options: ComposioInstagramOptions
@@ -201,6 +212,11 @@ export async function postImageToInstagram(
       error: lastCreateError ?? 'Create media container failed',
     };
   }
+
+  // CRITICAL: Wait for Instagram to process the media
+  // Error 9007 ("The media is not ready for publishing") indicates Instagram needs processing time.
+  // This delay ensures the media container is fully initialized before publishing.
+  await delay(2500); // 2.5 seconds - gives Instagram backend time to finalize media
 
   // Step 2: Publish post (Composio retries for 9007 internally)
   const postRes = await composioExecute(
