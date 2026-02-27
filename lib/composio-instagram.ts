@@ -7,6 +7,9 @@ const COMPOSIO_BASE = 'https://backend.composio.dev/api/v3/tools/execute';
 
 /** Common placeholder from .env.example - treat as "not set" and resolve from API */
 const PLACEHOLDER_IG_USER_ID = '17841400008460056';
+const CONNECTED_ACCOUNT_ID_PATTERN = /^ca_[A-Za-z0-9_-]+$/;
+const IG_USER_ID_PATTERN = /^\d+$/;
+const URL_PATTERN_ERROR = /did not match the expected pattern/i;
 
 export interface ComposioInstagramOptions {
   apiKey: string;
@@ -27,6 +30,53 @@ export interface ComposioInstagramResult {
   /** Media/container id from Instagram */
   mediaId?: string;
   error?: string;
+}
+
+function normalizeConnectedAccountId(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  if (!CONNECTED_ACCOUNT_ID_PATTERN.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+function normalizeIgUserId(value?: string): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === PLACEHOLDER_IG_USER_ID) return undefined;
+  if (!IG_USER_ID_PATTERN.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+function normalizeImageUrlForInstagram(value: string): string {
+  const trimmed = value.trim();
+  let parsed: URL;
+  try {
+    parsed = new URL(trimmed);
+  } catch {
+    throw new Error('Instagram publish failed: generated image URL is invalid');
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error('Instagram publish failed: image URL must be http(s)');
+  }
+  return parsed.toString();
+}
+
+function buildInstagramImageUrlCandidates(imageUrl: string): string[] {
+  const primary = normalizeImageUrlForInstagram(imageUrl);
+  const parsed = new URL(primary);
+
+  // Meta sometimes rejects one Fal host variant while accepting another.
+  if (!parsed.hostname.endsWith('fal.media')) return [primary];
+
+  const hosts = Array.from(new Set([parsed.hostname, 'fal.media', 'v3b.fal.media']));
+  return hosts.map((host) => {
+    const next = new URL(primary);
+    next.hostname = host;
+    return next.toString();
+  });
+}
+
+function shouldRetryWithAlternateImageUrl(errorMessage: string): boolean {
+  return URL_PATTERN_ERROR.test(errorMessage) || /invalid url/i.test(errorMessage);
 }
 
 async function composioExecute(
@@ -87,38 +137,68 @@ export async function postImageToInstagram(
   options: ComposioInstagramOptions
 ): Promise<ComposioInstagramResult> {
   const { apiKey, userId, imageUrl, caption, connectedAccountId } = options;
-  const accountId = connectedAccountId?.trim();
-  let igUserId = options.igUserId?.trim();
-  if (!igUserId || igUserId === PLACEHOLDER_IG_USER_ID) {
+  const accountId = normalizeConnectedAccountId(connectedAccountId);
+  let igUserId = normalizeIgUserId(options.igUserId);
+  if (!igUserId) {
     igUserId = await resolveIgUserId(apiKey, userId, accountId);
   }
-
-  // Step 1: Create media container
-  const createRes = await composioExecute(
-    apiKey,
-    'INSTAGRAM_CREATE_MEDIA_CONTAINER',
-    userId,
-    {
-      image_url: imageUrl,
-      caption: caption.slice(0, 2200), // Instagram limit
-      ig_user_id: igUserId,
-      content_type: 'photo',
-    },
-    accountId
-  );
-
-  if (!createRes.successful || !createRes.data) {
-    return {
-      success: false,
-      error: createRes.error ?? 'Create media container failed',
-    };
+  if (!IG_USER_ID_PATTERN.test(igUserId)) {
+    throw new Error('Instagram publish failed: invalid ig_user_id');
   }
 
-  const containerId = (createRes.data as { id?: string }).id;
-  if (!containerId || typeof containerId !== 'string') {
+  const imageCandidates = buildInstagramImageUrlCandidates(imageUrl);
+
+  let containerId: string | undefined;
+  let lastCreateError: string | undefined;
+  for (let i = 0; i < imageCandidates.length; i++) {
+    const candidateImageUrl = imageCandidates[i];
+    try {
+      // Step 1: Create media container
+      const createRes = await composioExecute(
+        apiKey,
+        'INSTAGRAM_CREATE_MEDIA_CONTAINER',
+        userId,
+        {
+          image_url: candidateImageUrl,
+          caption: caption.slice(0, 2200), // Instagram limit
+          ig_user_id: igUserId,
+          content_type: 'photo',
+        },
+        accountId
+      );
+
+      if (!createRes.successful || !createRes.data) {
+        lastCreateError = createRes.error ?? 'Create media container failed';
+        const canRetry = i < imageCandidates.length - 1 && shouldRetryWithAlternateImageUrl(lastCreateError);
+        if (canRetry) continue;
+        return {
+          success: false,
+          error: lastCreateError,
+        };
+      }
+
+      containerId = (createRes.data as { id?: string }).id;
+      if (!containerId || typeof containerId !== 'string') {
+        lastCreateError = 'No container id in CREATE_MEDIA_CONTAINER response';
+        return {
+          success: false,
+          error: lastCreateError,
+        };
+      }
+      break;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Create media container failed';
+      lastCreateError = message;
+      const canRetry = i < imageCandidates.length - 1 && shouldRetryWithAlternateImageUrl(message);
+      if (canRetry) continue;
+      throw err;
+    }
+  }
+
+  if (!containerId) {
     return {
       success: false,
-      error: 'No container id in CREATE_MEDIA_CONTAINER response',
+      error: lastCreateError ?? 'Create media container failed',
     };
   }
 

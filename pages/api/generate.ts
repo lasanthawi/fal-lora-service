@@ -2,16 +2,64 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 
 const FAL_API_KEY = process.env.FAL_API_KEY;
 const DEFAULT_LORA_URL = 'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
+type GenerateBody = Record<string, unknown>;
+type ImageSize = 'square' | 'landscape' | 'portrait';
+
+function toTrimmedString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed || undefined;
+}
+
+function parseGenerateBody(rawBody: unknown): GenerateBody {
+  if (!rawBody) return {};
+
+  if (typeof rawBody === 'object' && !Buffer.isBuffer(rawBody)) {
+    return rawBody as GenerateBody;
+  }
+
+  const rawText = (Buffer.isBuffer(rawBody) ? rawBody.toString('utf8') : String(rawBody)).trim();
+  if (!rawText) return {};
+
+  try {
+    const parsed = JSON.parse(rawText) as unknown;
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as GenerateBody;
+    }
+  } catch {
+    // Not JSON; continue.
+  }
+
+  const urlEncoded = new URLSearchParams(rawText);
+  if (Array.from(urlEncoded.keys()).length > 0) {
+    return Object.fromEntries(urlEncoded.entries());
+  }
+
+  // Fallback: treat raw text/plain body as the prompt itself.
+  return { prompt: rawText };
+}
+
+function normalizeImageSize(value: unknown): ImageSize {
+  const normalized = toTrimmedString(value);
+  if (normalized === 'landscape' || normalized === 'portrait') return normalized;
+  return 'square';
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { prompt, image_size = 'square', fal_api_key, lora_url = DEFAULT_LORA_URL } = req.body;
+  const body = parseGenerateBody(req.body);
+  const prompt = toTrimmedString(body.prompt);
+  const image_size = normalizeImageSize(body.image_size);
+  const fal_api_key = toTrimmedString(body.fal_api_key);
+  const lora_url = toTrimmedString(body.lora_url) ?? DEFAULT_LORA_URL;
 
   if (!prompt) {
-    return res.status(400).json({ error: 'Prompt is required' });
+    return res.status(400).json({
+      error: 'Prompt is required and cannot be empty',
+    });
   }
 
   const apiKey = fal_api_key || FAL_API_KEY;
