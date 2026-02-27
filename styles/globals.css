@@ -381,6 +381,11 @@ body {
   box-sizing: border-box;
 }
 
+/* Password field: room for icon inside on the right */
+.auth-layout input[type='password'] {
+  padding-right: 48px;
+}
+
 .auth-layout input::placeholder {
   color: var(--text-muted);
 }
@@ -395,18 +400,18 @@ body {
 .auth-layout button.primary,
 .auth-layout a[role='button'] {
   width: 100%;
-  padding: 14px 20px;
-  font-size: 15px;
+  padding: 20px 28px;
+  font-size: 18px;
   font-weight: 600;
   font-family: var(--font);
   border: none;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: #0a0a0b;
   cursor: pointer;
   transition: background var(--transition), box-shadow var(--transition);
   margin-top: 4px;
 }
+
 
 .auth-layout button[type='submit']:hover,
 .auth-layout button.primary:hover {
@@ -440,7 +445,17 @@ body {
   font-size: 14px;
 }
 
-/* Hide stuck loading spinners on view-password and sign-in (Stack Auth) */
+/* Primary button text must be black (override Stack and .auth-card--handler span) */
+.auth-layout .auth-card--handler button[type='submit'],
+.auth-layout .auth-card--handler button[type='submit'] span,
+.auth-layout .auth-card--handler button[type='submit'] p,
+.auth-layout .auth-card--handler form button.primary,
+.auth-layout .auth-card--handler form button.primary span,
+.auth-layout .auth-card--handler form button.primary p {
+  color: #000 !important;
+}
+
+/* Hide stuck loading spinners and reload icon on view-password (Stack Auth) */
 .auth-layout .auth-card--handler [class*='animate-spin'],
 .auth-layout .auth-card--handler [class*='loading'] svg,
 .auth-layout .auth-card--handler button svg[class*='spin'],
@@ -449,6 +464,20 @@ body {
 .auth-layout .auth-card--handler [class*='spinner'],
 .auth-layout .auth-card--handler button [class*='animate'],
 .auth-layout .auth-card--handler [role='status'] svg {
+  display: none !important;
+}
+
+/* Hide the reload/refresh icon next to password (Stack often shows it with the eye toggle) */
+.auth-layout .auth-card--handler form div:has(input[type='password']) [aria-label*='oading'],
+.auth-layout .auth-card--handler form div:has(input[type='password']) [aria-label*='efresh'],
+.auth-layout .auth-card--handler form div:has(input[type='password']) [class*='efresh'],
+.auth-layout .auth-card--handler form div:has(input[type='password']) [class*='eload'],
+.auth-layout .auth-card--handler form div:has(input[type='password']) > div:has(svg):not(:has(button)) {
+  display: none !important;
+}
+
+/* When reload and eye are stacked in one container: hide the first (reload), keep the eye button */
+.auth-layout .auth-card--handler form div:has(input[type='password']) > div:has(button) > *:first-child:not(button) {
   display: none !important;
 }
 
@@ -465,29 +494,102 @@ body {
   display: none !important;
 }
 
-/* View password button: clear icon-only button style */
+/* Password row: wrapper that has the input (and maybe icon) – single row, icon inside on the right */
+.auth-layout .auth-card--handler form div:has(input[type='password']) {
+  position: relative;
+  display: flex !important;
+  align-items: center !important;
+  flex-direction: row !important;
+}
+
+.auth-layout .auth-card--handler form div:has(input[type='password']) input[type='password'] {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  order: 1 !important;
+}
+
+/* View password button: force RIGHT inside the field, fixed size so it doesn’t jump when toggling */
+.auth-layout .auth-card--handler form div:has(input[type='password']) button:not([type='submit']),
+.auth-layout .auth-card--handler form div:has(input[type='password']) [role='button']:not([type='submit']),
 .auth-layout .auth-card--handler button[type='button'][aria-label*='password'],
 .auth-layout .auth-card--handler button[type='button'][aria-label*='Password'],
-.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 10px;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']),
+.auth-layout .auth-card--handler [class*='Password'] button:not([type='submit']) {
+  position: absolute !important;
+  left: auto !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  max-width: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  flex: none !important;
+  flex-shrink: 0 !important;
+  order: 2 !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer !important;
+  border-radius: var(--radius-sm) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  box-sizing: border-box !important;
 }
 
+.auth-layout .auth-card--handler form div:has(input[type='password']) button:not([type='submit']):hover,
 .auth-layout .auth-card--handler [class*='password'] button:not([type='submit']):hover {
-  background: var(--bg-hover);
-  color: var(--text);
+  background: var(--bg-hover) !important;
+  color: var(--text) !important;
 }
 
-.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) svg:not([class*='spin']) {
+/* Eye icon: fixed size and centered so show/hide toggle doesn’t move the button */
+.auth-layout .auth-card--handler form div:has(input[type='password']) button:not([type='submit']) svg,
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) svg {
   display: block !important;
-  width: 20px;
-  height: 20px;
+  width: 20px !important;
+  height: 20px !important;
+  flex-shrink: 0 !important;
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  pointer-events: none !important;
+}
+
+.auth-layout .auth-card--handler form div:has(input[type='password']) button:not([type='submit']) svg:not(:first-of-type),
+.auth-layout .auth-card--handler [class*='password'] button:not([type='submit']) svg:not(:first-of-type) {
+  display: none !important;
+}
+
+/* When icon is in a sibling div (Stack often does label, input-div, button-div): use section wrapper */
+.auth-layout .auth-card--handler form > div:has(input[type='password']) {
+  position: relative !important;
+}
+
+.auth-layout .auth-card--handler form > div:has(input[type='password']) > div:last-child button,
+.auth-layout .auth-card--handler form > div:has(input[type='password']) > div:last-child [role='button'] {
+  position: absolute !important;
+  left: auto !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+  width: auto !important;
+  background: transparent !important;
+  border: none !important;
+  color: var(--text-secondary) !important;
+  cursor: pointer !important;
+}
+
+.auth-layout .auth-card--handler form > div:has(input[type='password']) > div:first-of-type input {
+  padding-right: 48px !important;
 }
 
 /* Form field spacing: any wrapper that contains an input */
