@@ -7,28 +7,9 @@ import { postImageToInstagram } from '../../../lib/composio-instagram';
 const DEFAULT_LORA_URL =
   'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3OsoA_pytorch_lora_weights.safetensors';
 
-function isCronRequest(req: NextApiRequest): boolean {
-  // Vercel identifies cron requests with x-vercel-cron header
-  return !!(req.headers['x-vercel-cron']);
-}
-
-function requireCronSecret(req: NextApiRequest): boolean {
-  // Skip secret check for legitimate Vercel cron requests
-  if (isCronRequest(req)) return true;
-
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // allow if not set (e.g. local dev)
-  const token = (req.headers.authorization ?? '').toString().replace(/^Bearer\\s+/i, '').trim();
-  return token === secret;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  if (!requireCronSecret(req)) {
-    return res.status(401).json({ error: 'Unauthorized' });
   }
 
   const falKey = process.env.FAL_API_KEY;
