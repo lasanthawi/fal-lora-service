@@ -4,12 +4,6 @@
     { "src": "package.json", "use": "@vercel/next" }
   ],
   "crons": [
-    {
-      "path": "/api/cron/instagram-post",
-      "schedule": "0 14 * * *",
-      "headers": {
-        "Authorization": "Bearer $CRON_SECRET"
-      }
-    }
+    { "path": "/api/cron/instagram-post", "schedule": "0 14 * * *" }
   ]
 }
