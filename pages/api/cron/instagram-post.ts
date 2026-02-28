@@ -5,19 +5,20 @@ import { generateImageWithFal } from '../../../lib/fal';
 import { postImageToInstagram } from '../../../lib/composio-instagram';
 
 const DEFAULT_LORA_URL =
-  'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3Osoa_pytorch_lora_weights.safetensors';
+  'https://v3b.fal.media/files/b/0a900b43/al92Go_LjKAQZXGu3OsoA_pytorch_lora_weights.safetensors';
+
+function isCronRequest(req: NextApiRequest): boolean {
+  // Vercel identifies cron requests with x-vercel-cron header
+  return !!(req.headers['x-vercel-cron']);
+}
 
 function requireCronSecret(req: NextApiRequest): boolean {
+  // Skip secret check for legitimate Vercel cron requests
+  if (isCronRequest(req)) return true;
+
   const secret = process.env.CRON_SECRET;
   if (!secret) return true; // allow if not set (e.g. local dev)
-  
-  // Vercel cron requests include the x-vercel-cron header
-  // These are already authenticated by Vercel's internal system
-  const isVercelCron = req.headers['x-vercel-cron'] === 'true';
-  if (isVercelCron) return true;
-  
-  // For manual requests, require the Bearer token
-  const token = (req.headers.authorization ?? '').toString().replace(/^Bearer\s+/i, '').trim();
+  const token = (req.headers.authorization ?? '').toString().replace(/^Bearer\\s+/i, '').trim();
   return token === secret;
 }
 
