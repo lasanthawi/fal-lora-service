@@ -10,6 +10,13 @@ const DEFAULT_LORA_URL =
 function requireCronSecret(req: NextApiRequest): boolean {
   const secret = process.env.CRON_SECRET;
   if (!secret) return true; // allow if not set (e.g. local dev)
+  
+  // Vercel cron requests include the x-vercel-cron header
+  // These are already authenticated by Vercel's internal system
+  const isVercelCron = req.headers['x-vercel-cron'] === 'true';
+  if (isVercelCron) return true;
+  
+  // For manual requests, require the Bearer token
   const token = (req.headers.authorization ?? '').toString().replace(/^Bearer\s+/i, '').trim();
   return token === secret;
 }
