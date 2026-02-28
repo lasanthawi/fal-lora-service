@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "builds": [
-    { "src": "package.json", "use": "@vercel/next" }
-  ],
-  "crons": [
-    { "path": "/api/cron/instagram-post", "schedule": "0 14 * * *" }
-  ]
-}
+{\n  \"version\": 2,\n  \"builds\": [\n    {\n      \"src\": \"package.json\",\n      \"use\": \"@vercel/next\"\n    }\n  ],\n  \"crons\": [\n    {\n      \"path\": \"/api/cron/instagram-post\",\n      \"schedule\": \"0 14 * * *\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $CRON_SECRET\"\n      }\n    }\n  ]\n}
