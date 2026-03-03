@@ -139,7 +139,7 @@ const SHOT_TYPES = [
   'close-up portrait, head and shoulders',
 ] as const;
 
-/** Composition / framing — what’s in frame (includes long shots for variety) */
+/** Composition / framing — what's in frame (includes long shots for variety) */
 const COMPOSITIONS = [
   'close-up, face and shoulders in frame',
   'medium shot, waist up',
@@ -198,21 +198,86 @@ const TATTOO_PHRASES = [
 ] as const;
 
 /** Short-sleeve items: arm visible so Maori tattoo (shoulder to elbow) can be shown */
+/** Short-sleeve items with EXPANDED color variety */
 const CLOTHING_SHORT_SLEEVE = [
+  // Classic basics
   'fitted black t-shirt, short sleeves',
   'white crew neck t-shirt, short sleeves',
   'grey v-neck tee, short sleeves',
   'navy polo shirt, short sleeves',
-  'plain dark tee and jeans, short sleeves',
+
+  // Vibrant colors
+  'burgundy/wine red t-shirt, short sleeves',
+  'forest green polo shirt, short sleeves',
+  'royal blue casual tee, short sleeves',
+  'olive green henley, short sleeves',
+  'mustard yellow t-shirt, short sleeves',
+  'burnt orange polo, short sleeves',
+  'teal/turquoise crew neck tee, short sleeves',
+  'maroon athletic tee, short sleeves',
+
+  // Earth tones
+  'tan/beige linen shirt, short sleeves',
+  'rust/terracotta polo, short sleeves',
+  'sage green casual shirt, short sleeves',
+  'camel brown henley, short sleeves',
+
+  // Patterns & textures
+  'striped navy and white polo, short sleeves',
+  'heather grey athletic tee, short sleeves',
+  'charcoal textured polo, short sleeves',
+  'light blue chambray shirt, short sleeves, unbuttoned over tee',
+
+  // Sports & athleisure
+  'performance fabric athletic tee in bright blue, short sleeves',
+  'moisture-wicking gym shirt in red, short sleeves',
+  'sports polo in forest green, short sleeves',
 ] as const;
 
 const CLOTHING_LONG_SLEEVE = [
+  // Hoodies & sweatshirts - varied colors
   'grey hoodie, casual',
+  'navy hoodie with logo, relaxed fit',
+  'forest green sweatshirt, crew neck',
+  'maroon/burgundy hoodie, cozy',
+  'black pullover hoodie',
+  'charcoal zip-up hoodie',
+
+  // Casual shirts - expanded colors
   'navy casual shirt, sleeves rolled to mid-forearm',
   'olive green casual shirt, sleeves rolled',
-  'charcoal henley',
-  'light grey sweatshirt',
-  'plain dark tee and jeans',
+  'white oxford shirt, sleeves rolled, smart casual',
+  'light blue denim shirt, sleeves rolled',
+  'burgundy flannel shirt, sleeves rolled, relaxed',
+  'forest green casual button-down, sleeves rolled',
+  'tan/khaki utility shirt, sleeves rolled',
+
+  // Henleys & long-sleeve tees
+  'charcoal henley, casual',
+  'navy long-sleeve henley',
+  'olive green henley, relaxed',
+  'white thermal long-sleeve',
+  'grey waffle-knit long-sleeve tee',
+
+  // Sweaters & knits
+  'light grey crew neck sweater, minimal',
+  'navy v-neck sweater over white tee',
+  'forest green knit sweater, textured',
+  'charcoal cable-knit sweater',
+  'oatmeal/cream colored sweater, cozy',
+
+  // Jackets & layers
+  'black bomber jacket over tee',
+  'navy blazer, smart casual',
+  'olive green field jacket, adventure vibe',
+  'tan suede jacket, sophisticated',
+  'denim jacket in dark wash, casual cool',
+  'grey sports jacket, modern fit',
+
+  // Business casual
+  'crisp white dress shirt, sleeves rolled elegantly',
+  'light pink/salmon dress shirt, modern professional',
+  'sky blue dress shirt, sharp',
 ] as const;
 
 const CLOTHING_OPTIONS = [...CLOTHING_SHORT_SLEEVE, ...CLOTHING_LONG_SLEEVE] as readonly string[];
